@@ -1,0 +1,22 @@
+
+function jsonResponse(code, message, data) {
+	return {
+		code: code,
+		message: message,
+		data: data || {}
+	}
+}
+
+function jsonSuccess(data= {}, message="success", code=200) {
+	return jsonResponse(200, message, data)
+}
+
+function jsonFail(message="fail", data={}, code=400) {
+	return jsonResponse(code, message, data)
+}
+
+module.exports = {
+	jsonFail,
+	jsonResponse,
+	jsonSuccess
+}
