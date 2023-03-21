@@ -31,11 +31,14 @@ router.get('/login', function(req, res) {
   
 });
 
-router.get('/query', function(req, res) {
+router.get('/query', function(req, res, next) {
   const mysql = require('../mysql')
   
   mysql.conn.query('SELECT * from users limit 1', (err, rows, fields) => {
-    if (err) throw err
+    if (err) {
+      next(err)
+      return
+    }
   
     console.log('The solution is: ', rows)
     // console.log('The solution is: ', fields)

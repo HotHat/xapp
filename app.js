@@ -32,16 +32,16 @@ app.use(function(req, res, next) {
 
 // error handler
 app.use(function (err, req, res, next) {
-  if (err.name === "UnauthorizedError") {
-    res.json(tools.jsonFail('invalid token', {}, 401))
-    
-  } else {
-    next(err);
-  }
+    console.log("--------------err log-----------")
+    // log err
+    console.error(err)
+    next(err)
 });
 
 
 app.use(function(err, req, res, next) {
+ console.log("--------------err handle-----------")
+
  if (err.name === "UnauthorizedError") {
     res.json(tools.jsonFail('invalid token', {}, 401))
     
@@ -53,9 +53,7 @@ app.use(function(err, req, res, next) {
   // render the error page
   // res.status(err.status || 500);
   // res.render('error');
-
   res.json(tools.jsonFail(req.app.get('env') === 'development' ? err.message : 'system error', {}, err.status || 500))
-
  }
 
 });
