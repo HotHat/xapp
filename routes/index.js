@@ -132,6 +132,51 @@ router.post('/vmess/add', function(req, res, next) {
     
 })
 
+router.get('/vmess/list', function(req, res, next) {
+  let page = req.query.page || 1
+
+  var p = parseInt(page)
+  if (isNaN(p))  {
+    p = 1
+  }
+
+  let perPage = 2
+
+  let start = (p-1) * perPage
+
+  // current page
+  let curentPage = sqlQuery(
+    "SELECT * FROM vmess ORDER BY id DESC LIMIT ? OFFSET ?", 
+    [perPage, start]
+  )
+
+  // total count
+  let total = sqlQuery("select count(*) as count from vmess")
+
+  Promise.all([curentPage, total]).then(function (results) {
+    let lst = results[0]  
+    let cn = results[1]
+    var total = 0
+    if (cn.length > 0 ) {
+      total = cn[0].count
+    }
+
+    res.json(jsonSuccess({
+        list: lst,
+        page: {
+          total_page: Math.ceil(total / perPage),
+          page_size: perPage,
+          current_page: page,
+          total: total
+        }
+    }))
+
+  }).catch (function(err) {
+    next(err)
+  })
+
+})
+
 
 router.get('/vmess/url', function(req, res, next) {
   let id = req.query.id || ''
