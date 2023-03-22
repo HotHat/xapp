@@ -16,7 +16,7 @@ function jsonSuccess(data= {}, message="success", code=200) {
 	return jsonResponse(200, message, data)
 }
 
-function jsonFail(message="fail", data={}, code=400) {
+function jsonFail(message="fail", code=400, data={}) {
 	return jsonResponse(code, message, data)
 }
 
@@ -55,6 +55,19 @@ function password_verify(pw, hash) {
 	return bcrypt.compareSync(pw, hash); // true
 }
 
+function sqlQuery(sql, params) {
+	const mysql = require('./mysql')
+
+	return new Promise(function (resolve, reject) {
+		mysql.conn.query(sql, params, (err, rows, fields) => {
+      if (err) {
+        reject(err)
+      } 
+      resolve(rows)
+    })
+	});
+}
+
 
 module.exports = {
 	jsonFail,
@@ -66,5 +79,6 @@ module.exports = {
 	int2ip,
 	remoteIp,
 	password_hash,
-	password_verify
+	password_verify,
+	sqlQuery
 }

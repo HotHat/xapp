@@ -36,7 +36,7 @@ app.use(function(req, res, next) {
 // error handler
 app.use(function (err, req, res, next) {
   if (err.name === "UnauthorizedError") {
-    res.json(tools.jsonFail('invalid token', {}, 401))
+    res.json(tools.jsonFail('invalid token', 401))
     
   } else {
     next(err);
@@ -46,7 +46,7 @@ app.use(function (err, req, res, next) {
 
 app.use(function(err, req, res, next) {
  if (err.name === "UnauthorizedError") {
-    res.json(tools.jsonFail('invalid token', {}, 401))
+    res.json(tools.jsonFail('invalid token', 401))
     
  } else {
   // set locals, only providing error in development
@@ -57,7 +57,7 @@ app.use(function(err, req, res, next) {
   // res.status(err.status || 500);
   // res.render('error');
 
-  res.json(tools.jsonFail(req.app.get('env') === 'development' ? err.message : 'system error', {}, err.status || 500))
+  res.json(tools.jsonFail(req.app.get('env') === 'development' ? err.message : 'system error', err.status || 500))
 
  }
 

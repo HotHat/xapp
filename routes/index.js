@@ -5,11 +5,10 @@ var { expressjwt } = require("express-jwt");
 var format = require('date-format');
 
 let tools = require("../tools");
-const { timestamp } = require('../tools');
-const { ip2int } = require('../tools');
-const { remoteIp } = require('../tools');
-const { password_hash } = require('../tools');
-const { password_verify } = require('../tools');
+const { ip2int,remoteIp, timestamp  } = require('../tools');
+const { password_hash, password_verify  } = require('../tools');
+const { sqlQuery } = require('../tools');
+const mysql = require('../mysql')
 
 
 // router.use(
@@ -26,14 +25,58 @@ router.get('/', function(req, res) {
 });
 
 
-router.get('/login', function(req, res) {
+router.post('/login', function(req, res, next) {
   // console.log('jwt', process.env)
   // console.log('jwt', process.env.JWT_SECRET)
-  let token = jwt.sign({id: 1, email: '119283@qq.com'}, process.env.JWT_SECRET, { expiresIn: '1h'})
+  var email = req.body.email || ''
+  var password = req.body.password || ''
 
-  res.json(tools.jsonSuccess({
-    token: token
-  }))
+  sqlQuery('select * from users where email=?', [email]) 
+  .then(function (rows) {
+
+    if (rows.length == 0) {
+      res.json(tools.jsonFail('登录失败', 401))
+      return 
+    }
+
+    let user = rows[0]
+
+    console.log('pw', password)
+    console.log('upw', user.password)
+    console.log('user', user)
+    if (!password_verify(password, user.password)) {
+      res.json(tools.jsonFail('密码错误', 401))
+      return 
+    }
+
+    // update login info
+    let ip = remoteIp(req)
+    let ipint = ip2int(ip) 
+    let ts = timestamp()
+    sqlQuery(
+      "update users set last_login_at=? and last_login_ip=? where id=?", 
+      [ts, ipint, user.id]
+    ).then(function (results) { 
+      // console.log('update user', results)
+    }).catch(function (err) {
+      next(err)
+    })
+
+    let token = jwt.sign({id: 1, email: user.email}, process.env.JWT_SECRET, { expiresIn: '1h'})
+
+    res.json(tools.jsonSuccess({
+      token: token
+    }))
+
+  }).catch(function (err) {
+    next(err)
+  })
+
+  // let token = jwt.sign({id: 1, email: '119283@qq.com'}, process.env.JWT_SECRET, { expiresIn: '1h'})
+
+  // res.json(tools.jsonSuccess({
+  // token: token
+  // }))
   
 });
 
@@ -104,6 +147,16 @@ router.get('/pw', function(req, res, next) {
       check: password_verify('1234', h),
       check2: password_verify(pw, h) 
     }
+  })
+})
+
+router.post('/pa', function(req, res, next) {
+  console.log(req.params)
+  res.json({
+    code: 200,
+    data: req.params,
+    body: req.body,
+    qu: req.query
   })
 })
 
