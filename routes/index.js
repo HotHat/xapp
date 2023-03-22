@@ -8,6 +8,7 @@ let tools = require("../tools");
 const { ip2int,remoteIp, timestamp  } = require('../tools');
 const { password_hash, password_verify  } = require('../tools');
 const { sqlQuery } = require('../tools');
+const { jsonFail, jsonSuccess } = require('../tools');
 const mysql = require('../mysql')
 
 
@@ -41,9 +42,6 @@ router.post('/login', function(req, res, next) {
 
     let user = rows[0]
 
-    console.log('pw', password)
-    console.log('upw', user.password)
-    console.log('user', user)
     if (!password_verify(password, user.password)) {
       res.json(tools.jsonFail('密码错误', 401))
       return 
@@ -53,8 +51,10 @@ router.post('/login', function(req, res, next) {
     let ip = remoteIp(req)
     let ipint = ip2int(ip) 
     let ts = timestamp()
+    // console.log(ts)
+    // console.log(ipint)
     sqlQuery(
-      "update users set last_login_at=? and last_login_ip=? where id=?", 
+      "UPDATE users SET last_login_at=?, last_login_ip=? WHERE id=?", 
       [ts, ipint, user.id]
     ).then(function (results) { 
       // console.log('update user', results)
@@ -62,9 +62,9 @@ router.post('/login', function(req, res, next) {
       next(err)
     })
 
-    let token = jwt.sign({id: 1, email: user.email}, process.env.JWT_SECRET, { expiresIn: '1h'})
+    let token = jwt.sign({id: user.id, email: user.email}, process.env.JWT_SECRET, { expiresIn: '1h'})
 
-    res.json(tools.jsonSuccess({
+    res.json(jsonSuccess({
       token: token
     }))
 
@@ -79,6 +79,55 @@ router.post('/login', function(req, res, next) {
   // }))
   
 });
+
+router.post('/vmess/add', function(req, res, next) {
+    let vmess = {
+      v : '2',
+      ps: req.body.ps || '',
+      add: req.body.add || '',
+      port: req.body.port || '',
+      uid: req.body.id || '',
+      aid: req.body.aid || '',
+      scy: req.body.scy || '',
+      net: req.body.net || '',
+      type: req.body.type || '',
+      host: req.body.host || '',
+      path: req.body.path || '',
+      tls: req.body.tls || '',
+      sni: req.body.sni || '',
+      alpn: req.body.alpn || '',
+      fp: req.body.ps || ''
+    }
+
+    // test duplicate id
+    sqlQuery(
+      "SELECT id FROM vmess WHERE uid=? limit 1", [vmess.uid]
+    ).then(function (rows) { 
+
+      if (rows.length > 0 ) {
+        res.json(jsonFail("id dupilate: " + vmess.uid))
+        return 
+      }
+
+      // insert data
+      sqlQuery(
+        "INSERT INTO vmess SET ?", vmess
+      ).then(function (results) { 
+
+        res.json(jsonSuccess({
+          id: results.insertId
+        }))
+
+      }).catch(function (err) {
+        next(err)
+      })
+
+    }).catch(function (err) {
+      next(err)
+    })
+
+    
+})
 
 router.get('/query', function(req, res, next) {
   const mysql = require('../mysql')
