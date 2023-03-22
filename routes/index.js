@@ -5,11 +5,12 @@ var { expressjwt } = require("express-jwt");
 var format = require('date-format');
 
 let tools = require("../tools");
-const { ip2int,remoteIp, timestamp  } = require('../tools');
+const { ip2int,remoteIp, timestamp, now  } = require('../tools');
 const { password_hash, password_verify  } = require('../tools');
 const { sqlQuery } = require('../tools');
 const { jsonFail, jsonSuccess } = require('../tools');
-const mysql = require('../mysql')
+const mysql = require('../mysql');
+const { encodeBase64 } = require('bcryptjs');
 
 
 // router.use(
@@ -96,7 +97,9 @@ router.post('/vmess/add', function(req, res, next) {
       tls: req.body.tls || '',
       sni: req.body.sni || '',
       alpn: req.body.alpn || '',
-      fp: req.body.ps || ''
+      fp: req.body.ps || '',
+      created_at: now(),
+      upadetd_at: now(),
     }
 
     // test duplicate id
@@ -128,6 +131,34 @@ router.post('/vmess/add', function(req, res, next) {
 
     
 })
+
+
+router.get('/vmess/url', function(req, res, next) {
+  let id = req.query.id || ''
+
+  sqlQuery(
+    "SELECT v, ps, `add`, port, uid AS id, aid, scy, net, type, host, path, tls, sni, alpn, fp FROM vmess WHERE id=? limit 1", 
+    [id]
+  ).then(function (rows) {
+
+      if (rows.length == 0) {
+        res.json(jsonFail('not data'), 404)
+        return
+      }
+
+      let row = rows[0]
+      let str = JSON.stringify(row)
+      let url = "vmess://" + Buffer.from(str).toString('base64')
+      res.json(jsonSuccess({
+          url: url
+      }))
+
+
+  }).catch(function (err) {
+    next(err)
+  })
+})
+
 
 router.get('/query', function(req, res, next) {
   const mysql = require('../mysql')
