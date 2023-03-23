@@ -369,6 +369,18 @@ router.get('/promise', function(req, res, next) {
   // });
 })
 
+router.get('/s', function(req, res, next) {
+  const tools = require(global.S.BASE_DIR + '/tools')
+
+  res.json(
+    {
+      s: global.S,
+      n: tools.now(),
+    }
+  )
+
+})
+
 
 
 module.exports = router;

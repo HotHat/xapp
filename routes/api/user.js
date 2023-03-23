@@ -1,7 +1,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { sqlQuery, now, password_hash, jsonFail, jsonSuccess } = require('../../tools');
+const { sqlQuery } = require('../../tools');
 
 router.get('/list', function(req, res, next) {
 	let page = req.query.page || 1
@@ -74,11 +74,11 @@ router.post('/add', function(req, res, next) {
 
 	// test duplicate id
 	sqlQuery(
-		"SELECT id FROM users WHERE email=? limit 1", [user.email]
+		"SELECT id FROM user WHERE email=? limit 1", [user.email]
 	).then(function (rows) { 
 
 		if (rows.length > 0 ) {
-			res.json(jsonFail("email已经存在: " + user.email))
+			res.json(jsonFail("email dupilate: " + user.email))
 			return 
 		}
 
