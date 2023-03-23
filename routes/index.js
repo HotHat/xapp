@@ -7,9 +7,11 @@ var format = require('date-format');
 let tools = require("../tools");
 const { ip2int,remoteIp, timestamp, now  } = require('../tools');
 const { password_hash, password_verify  } = require('../tools');
-const { sqlQuery } = require('../tools');
+const { sqlQuery, createCaptcha } = require('../tools');
 const { jsonFail, jsonSuccess } = require('../tools');
 const mysql = require('../mysql');
+const redis = require('../redis');
+const { v4: uuid } = require('uuid')
 const { encodeBase64 } = require('bcryptjs');
 
 
@@ -27,53 +29,82 @@ router.get('/', function(req, res) {
 });
 
 
+
+
 router.post('/login', function(req, res, next) {
   // console.log('jwt', process.env)
   // console.log('jwt', process.env.JWT_SECRET)
   var email = req.body.email || ''
   var password = req.body.password || ''
+  var captcha = req.body.captcha || ''
 
-  sqlQuery('select * from users where email=?', [email]) 
-  .then(function (rows) {
-
-    if (rows.length == 0) {
-      res.json(tools.jsonFail('登录失败', 401))
-      return 
-    }
-
-    let user = rows[0]
-
-    if (!password_verify(password, user.password)) {
-      res.json(tools.jsonFail('密码错误', 401))
-      return 
-    }
-
-    // update login info
-    let ip = remoteIp(req)
-    let ipint = ip2int(ip) 
-    let ts = timestamp()
-    // console.log(ts)
-    // console.log(ipint)
-    sqlQuery(
-      "UPDATE users SET last_login_at=?, last_login_ip=? WHERE id=?", 
-      [ts, ipint, user.id]
-    ).then(function (results) { 
-      // console.log('update user', results)
-    }).catch(function (err) {
-      next(err)
+  let auth = req.get('Authorization')
+  let token = auth.replace('Bearer ', '')
+  
+  let captchaCheck = new Promise(function (resolve, reject) {
+    redis.get(token).then(function (tk) {
+      if (tk != captcha) {
+        reject('验证码错误')
+      }
+      // do next
+      resolve(true)
     })
+  }) 
 
-    let token = jwt.sign({id: user.id, email: user.email}, process.env.JWT_SECRET, { expiresIn: '1h'})
+  captchaCheck.then(function (val) {
+    sqlQuery("select * from users where email=?", [email])
+      .then(function (rows) {
+        if (rows.length == 0) {
+          res.json(tools.jsonFail("登录失败", 401));
+          return;
+        }
 
-    res.json(jsonSuccess({
-      token: token
-    }))
+        let user = rows[0];
 
-  }).catch(function (err) {
-    next(err)
-  })
+        if (!password_verify(password, user.password)) {
+          res.json(tools.jsonFail("密码错误", 401));
+          return;
+        }
 
-  // let token = jwt.sign({id: 1, email: '119283@qq.com'}, process.env.JWT_SECRET, { expiresIn: '1h'})
+        // update login info
+        let ip = remoteIp(req);
+        let ipint = ip2int(ip);
+        let ts = timestamp();
+        // console.log(ts)
+        // console.log(ipint)
+        sqlQuery(
+          "UPDATE users SET last_login_at=?, last_login_ip=? WHERE id=?",
+          [ts, ipint, user.id]
+        )
+          .then(function (results) {
+            // console.log('update user', results)
+          })
+          .catch(function (err) {
+            next(err);
+          });
+
+        let token = jwt.sign(
+          { id: user.id, email: user.email },
+          process.env.JWT_SECRET,
+          { expiresIn: "1h" }
+        );
+
+        res.json(
+          jsonSuccess({
+            token: token,
+          })
+        );
+      })
+      .catch(function (err) {
+        next(err);
+      });
+  }).catch (function (err) {
+      res.json(
+          jsonFail(err)
+      );
+  });
+
+    // let token = jwt.sign({id: 1, email: '119283@qq.com'}, process.env.JWT_SECRET, { expiresIn: '1h'})
 
   // res.json(tools.jsonSuccess({
   // token: token
@@ -205,60 +236,19 @@ router.get('/vmess/url', function(req, res, next) {
 })
 
 
-router.get('/query', function(req, res, next) {
-  const mysql = require('../mysql')
+router.get('/captcha', function(req, res, next) {
+   let code = createCaptcha()
 
-  let now = format("yyyy-MM-dd hh:mm:ss", new Date())
-  let ip = remoteIp(req)
+   let id = uuid()
 
-  let user = {
-    name: 'lyh02', 
-    email: 'haha@qq.com', 
-    password: password_hash('123456'), 
-    thumb: '', 
-    last_logon_at: timestamp(), 
-    last_logon_ip: ip2int(ip), 
-    created_at: now, 
-    updated_at: now
-  }
+   redis.set(id, code.text).then(function(v) {}).catch(err => next(err))
 
-  console.log('ip: ', ip)
-  console.log('user: ', user)
+   res.type('svg')
+   res.set('Authorization', 'Bearer ' + id)
 
-  mysql.conn.query('INSERT INTO users set ? ', user, (err, results, fields) => {
-    if (err) {
-      next(err)
-      return
-    } 
-
-    console.log('Insert into users: ', results)
-
-    res.json(tools.jsonSuccess({
-      data: results
-    }));
-  })
-  
-  // mysql.conn.query('SELECT * from users limit 1', (err, rows, fields) => {
-    // if (err) {
-      // next(err)
-      // return
-    // } 
-// 
-    // let a = rows[0]
-// 
-    // console.log(format("yyyy-MM-dd hh:mm:ss", new Date(a.created_at)))
-    // console.log(format("yyyy-MM-dd hh:mm:ss", new Date()))
-  // 
-    // console.log('select : ', rows)
-    // console.log('The solution is: ', fields)
-    // res.json(tools.jsonSuccess({
-      // data: rows
-    // }));
-  // })
-
-  console.log('outof callback: ')
-  
-});
+   res.status(200).send(code.data)
+   res.end()
+})
 
 router.get('/pw', function(req, res, next) {
   pw = '123456'
@@ -286,14 +276,94 @@ router.post('/pa', function(req, res, next) {
 })
 
 
-router.post('/vmess/add', function(req, res, next) {
-  res.json({
-    code: 200,
-    data: {
-      token: "298372893"
-    }
-  })
+router.get('/command', function(req, res, next) {
+  const { spawn } = require('node:child_process');
+  const ls = spawn('ls', ['-l', '/usree']);
+
+  ls.stdout.on('data', (data) => {
+    console.log("stdout:",  data);
+    console.log(`stdout: ${data}`);
+    res.json({
+      code: 200,
+      data: {
+        token:  data.toString('utf8')
+      }
+    })
+  });
+
+  ls.stderr.on('data', (data) => {
+    console.log("stdout:",  data);
+    console.log(`stdout: ${data}`);
+    res.json({
+      code: 400,
+      data: {
+        data:  data.toString('utf8')
+      }
+    })
+  });
+
+
+
+
+  
 });
+
+router.get('/promise', function(req, res, next) {
+  // current page
+  let curentPage = sqlQuery(
+    "SELECT * FROM vmess ORDER BY id DESC LIMIT ? OFFSET ?", 
+    [2, 0]
+  )
+
+  // total count
+  let total = sqlQuery("select count(*) as count from vmess")
+
+  // chain multiple querys, just like Promise.all()
+  curentPage.then(function(rows) {
+    return new Promise(function(resolve, reject) {
+      total.then(function(results) {
+        resolve([rows, results])
+      }).catch(function(err) {
+        reject(err)
+      })
+    })
+  }).then( function(results) {
+    res.json({
+      code: 200,
+      data: results
+    })
+  })
+
+  // new Promise(function(resolve, reject) {
+
+  //   setTimeout(() => resolve(1), 1000);
+  
+  // }).then(function(result) {
+  
+  //   console.log(result); // 1
+  
+  //   return new Promise((resolve, reject) => { // (*)
+  //     setTimeout(() => resolve(result * 2), 1000);
+  //   });
+  
+  // }).then(function(result) { // (**)
+  
+  //   console.log(result); // 2
+  
+  //   return new Promise((resolve, reject) => {
+  //     setTimeout(() => resolve(result * 2), 1000);
+  //   });
+  
+  // }).then(function(result) {
+  
+  //   console.log(result); // 4
+  //   res.json({
+  //     code: 200,
+  //     data: result
+  //   })
+  
+  // });
+})
 
 
 

@@ -1,7 +1,8 @@
 
 const format = require('date-format');
 const ipInt = require('ip-to-int');
-var bcrypt = require('bcryptjs');
+const code = require("svg-captcha");
+const bcrypt = require('bcryptjs');
 
 
 function jsonResponse(code, message, data) {
@@ -68,6 +69,17 @@ function sqlQuery(sql, params) {
 	});
 }
 
+function createCaptcha() {
+    return code.create({
+        size: 4,
+        ignoreChars: "0o1iIl",
+        noise: 8,
+        color: true,
+        background: "#cc9966",
+        fontSize: 53 
+    });
+}
+
 
 module.exports = {
 	jsonFail,
@@ -80,5 +92,6 @@ module.exports = {
 	remoteIp,
 	password_hash,
 	password_verify,
-	sqlQuery
+	sqlQuery,
+	createCaptcha
 }

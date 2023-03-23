@@ -8,6 +8,7 @@ let tools = require('./tools')
 
 // console.log('dotenv', process.env)
 var indexRouter = require('./routes/index');
+var usersRouter = require('./routes/api/user');
 // var usersRouter = require('./routes/users');
 
 var app = express();
@@ -25,6 +26,8 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// order sensitive
+app.use('/api/user', usersRouter);
 app.use('/api', indexRouter);
 // app.use('/users', usersRouter);
 
