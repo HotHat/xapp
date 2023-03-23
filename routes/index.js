@@ -12,7 +12,6 @@ const { jsonFail, jsonSuccess } = require('../tools');
 const mysql = require('../mysql');
 const redis = require('../redis');
 const { v4: uuid } = require('uuid')
-const { encodeBase64 } = require('bcryptjs');
 
 
 // router.use(
@@ -130,7 +129,12 @@ router.post('/vmess/add', function(req, res, next) {
       alpn: req.body.alpn || '',
       fp: req.body.ps || '',
       created_at: now(),
-      upadetd_at: now(),
+      updated_at: now(),
+    }
+
+    if (vmess.uid == '' || vmess.add == '' || vmess.port == '') {
+        res.json(jsonFail("数据不全"))
+        return
     }
 
     // test duplicate id
@@ -176,7 +180,7 @@ router.get('/vmess/list', function(req, res, next) {
   let start = (p-1) * perPage
 
   // current page
-  let curentPage = sqlQuery(
+  let currentPage = sqlQuery(
     "SELECT * FROM vmess ORDER BY id DESC LIMIT ? OFFSET ?", 
     [perPage, start]
   )
@@ -184,7 +188,7 @@ router.get('/vmess/list', function(req, res, next) {
   // total count
   let total = sqlQuery("select count(*) as count from vmess")
 
-  Promise.all([curentPage, total]).then(function (results) {
+  Promise.all([currentPage, total]).then(function (results) {
     let lst = results[0]  
     let cn = results[1]
     var total = 0
