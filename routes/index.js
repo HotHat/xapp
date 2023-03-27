@@ -38,11 +38,15 @@ router.post('/login', function(req, res, next) {
   var captcha = req.body.captcha || ''
 
   let auth = req.get('Authorization')
+  if (!auth) {
+    res.json(tools.jsonFail("验证码错误", 401));
+    return;
+  }
   let token = auth.replace('Bearer ', '')
   
   let captchaCheck = new Promise(function (resolve, reject) {
     redis.get(token).then(function (tk) {
-      if (tk != captcha) {
+      if (tk.toLowerCase() != captcha.toLowerCase()) {
         reject('验证码错误')
       }
       // do next
@@ -245,7 +249,10 @@ router.get('/captcha', function(req, res, next) {
 
    let id = uuid()
 
-   redis.set(id, code.text).then(function(v) {}).catch(err => next(err))
+   redis.set(id, code.text, {
+    EX: 60,
+    NX: true
+  }).then(function(v) {}).catch(err => next(err))
 
    res.type('svg')
    res.set('Authorization', 'Bearer ' + id)
