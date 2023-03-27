@@ -249,8 +249,10 @@ router.get('/captcha', function(req, res, next) {
 
    res.type('svg')
    res.set('Authorization', 'Bearer ' + id)
+   res.set('Content-Type', 'application/json')
 
-   res.status(200).send(code.data)
+   let bs = 'data:image/svg+xml;base64,' + Buffer.from(code.data).toString('base64')
+   res.status(200).send({code: 200, data: {url: bs }})
    res.end()
 })
 
