@@ -46,7 +46,7 @@ router.post('/login', function(req, res, next) {
   
   let captchaCheck = new Promise(function (resolve, reject) {
     redis.get(token).then(function (tk) {
-      if (tk.toLowerCase() != captcha.toLowerCase()) {
+      if (!tk || tk.toLowerCase() != captcha.toLowerCase()) {
         reject('验证码错误')
       }
       // do next
@@ -95,6 +95,8 @@ router.post('/login', function(req, res, next) {
         res.json(
           jsonSuccess({
             token: token,
+            id: user.id,
+            email: user.email,
           })
         );
       })

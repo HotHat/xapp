@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const { sqlQuery } = require('../../tools');
+const format = require('date-format');
+
 
 router.get('/list', function(req, res, next) {
 	let page = req.query.page || 1
@@ -16,7 +18,7 @@ router.get('/list', function(req, res, next) {
   let start = (p-1) * perPage
 
 	let currentPage = sqlQuery(
-    "SELECT id,name,email,thumb,created_at FROM users ORDER BY id DESC LIMIT ? OFFSET ?", 
+    "SELECT id,name,email,thumb,last_login_at,created_at FROM users ORDER BY id DESC LIMIT ? OFFSET ?", 
     [perPage, start]
   )
 
@@ -40,10 +42,21 @@ router.get('/list', function(req, res, next) {
       total = cn[0].count
     }
 
+		let result = []
+		lst.forEach(function(it) {
+			result.push({
+				id: it.id,
+				name: it.name,
+				email: it.email,
+				loginAt: it.last_login_at===0 ? "" : format("yyyy-MM-dd hh:mm:ss", new Date(it.last_login_at*1000)),
+				createdAt: format("yyyy-MM-dd hh:mm:ss", it.created_at)
+			})
+		})
+
     res.json({
       code: 200,
       data: {
-				list: lst,
+				list: result,
 				page: {
 					total_page: Math.ceil(total / perPage),
           page_size: perPage,
