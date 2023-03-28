@@ -1,4 +1,10 @@
 
+const format = require('date-format');
+const ipInt = require('ip-to-int');
+const code = require("svg-captcha");
+const bcrypt = require('bcryptjs');
+
+
 function jsonResponse(code, message, data) {
 	return {
 		code: code,
@@ -11,12 +17,81 @@ function jsonSuccess(data= {}, message="success", code=200) {
 	return jsonResponse(200, message, data)
 }
 
-function jsonFail(message="fail", data={}, code=400) {
+function jsonFail(message="fail", code=400, data={}) {
 	return jsonResponse(code, message, data)
 }
+
+function now() {
+  return format("yyyy-MM-dd hh:mm:ss", new Date())
+}
+
+function timestamp() {
+	return Math.floor(Date.now() / 1000)
+}
+
+function ip2int(ip) {
+	return ipInt(ip).toInt();
+}
+
+function int2ip(n) {
+	return ipInt(n).toIP();
+}
+
+function remoteIp(req) {
+	var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+	if (ip.startsWith("::ffff:")) {
+		ip = ip.substr(7)
+	}
+
+	return ip
+}
+
+function password_hash(pw) {
+	var salt = bcrypt.genSaltSync(10);
+  return  bcrypt.hashSync(pw, salt);
+}
+
+function password_verify(pw, hash) {
+	return bcrypt.compareSync(pw, hash); // true
+}
+
+function sqlQuery(sql, params) {
+	const mysql = require('./mysql')
+
+	return new Promise(function (resolve, reject) {
+		mysql.conn.query(sql, params, (err, rows, fields) => {
+      if (err) {
+        reject(err)
+      } 
+      resolve(rows)
+    })
+	});
+}
+
+function createCaptcha() {
+    return code.create({
+        size: 4,
+        ignoreChars: "0o1iIl",
+        noise: 8,
+        color: true,
+        background: "#cc9966",
+        fontSize: 53 
+    });
+}
+
 
 module.exports = {
 	jsonFail,
 	jsonResponse,
-	jsonSuccess
+	jsonSuccess,
+	now,
+	timestamp,
+	ip2int,
+	int2ip,
+	remoteIp,
+	password_hash,
+	password_verify,
+	sqlQuery,
+	createCaptcha
 }
