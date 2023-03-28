@@ -5,7 +5,8 @@ const redis = require(global.S.BASE_DIR + '/redis');
 
 const format = require('date-format');
 const { v4: uuid } = require('uuid')
-let jwt = require('jsonwebtoken')
+let jwt = require('jsonwebtoken');
+const { UnauthorizedError } = require('express-jwt');
 
 
 exports.dashboard = function(req, res, next) {
@@ -205,7 +206,7 @@ exports.admin_login = function(req, res, next) {
           process.env.JWT_SECRET,
           { expiresIn: "1h" }
         );
-
+				console.log('token', token)
         res.json(
           jsonSuccess({
             token: token,
@@ -222,5 +223,67 @@ exports.admin_login = function(req, res, next) {
           jsonFail(err)
       );
   });
+}
+
+function getAdminUserById(id) {
+	return  new Promise(function (resolve, reject) {
+		sqlQuery("SELECT * FROM admin WHERE id=?", [id]).then((rows) => {
+			resolve(rows[0] || null)
+		}).catch((err) => {
+			reject(err)
+		})
+	});
+}
+
+exports.password_change = function(req, res, next) {
+  var old_password = req.body.old_password || ''
+  var new_password = req.body.new_password || ''
+  var confirm_password = req.body.confirm_password || ''
+
+
+	if (new_password !== confirm_password) {
+		res.json(jsonFail("密码不匹配"))
+		return 
+	}
+	
+	if (new_password == "") {
+		res.json(jsonFail("密码不能为空"))
+		return 
+	}
+
+
+	let adminPromise = getAdminUserById(req.auth.id || '')
+
+
+	let err = new Error("")
+	err.status = 400
+	adminPromise.then(function (user) {
+		if (!user) {
+			err.message = "未登录"
+			next(err)
+		}
+
+		if (!password_verify(old_password, user.password)) {
+      console.log("3333");
+			err.message = "旧密码不匹配"
+      next(err);
+    } else {
+      sqlQuery("UPDATE admin SET password=? WHERE id=?", [
+        password_hash(new_password),
+        user.id,
+      ])
+        .then(function (results) {
+          res.json(jsonSuccess());
+          // console.log('update user', results)
+        })
+        .catch(function (err) {
+          next(err);
+        });
+    }
+		
+	}).catch(function (err) {
+		next(err)
+	})
+
 }
 
