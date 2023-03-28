@@ -14,7 +14,7 @@ let tools = require('./tools')
 // console.log('dotenv', process.env)
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/api/user');
-// var usersRouter = require('./routes/users');
+var adminRouter = require('./routes/api/admin');
 
 var app = express();
 
@@ -46,6 +46,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // order sensitive
 app.use('/api/user', usersRouter);
+app.use('/api/panel', adminRouter);
 app.use('/api', indexRouter);
 // app.use('/users', usersRouter);
 
