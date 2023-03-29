@@ -27,6 +27,8 @@ router.post('/login', adminController.admin_login)
 
 router.get('/user/list', adminController.user_list)
 router.post('/user/add', adminController.add_user)
+router.post('/user/change/password', adminController.user_change_password)
+router.post('/user/change/status', adminController.user_status_change)
 
 
 

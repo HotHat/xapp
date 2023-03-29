@@ -7,6 +7,7 @@ const format = require('date-format');
 const { v4: uuid } = require('uuid')
 let jwt = require('jsonwebtoken');
 const { UnauthorizedError } = require('express-jwt');
+const { int2ip } = require('../../tools');
 
 
 exports.dashboard = function(req, res, next) {
@@ -44,12 +45,12 @@ exports.user_list = function(req, res, next) {
     p = 1
   }
 
-  let perPage = 2
+  let perPage = parseInt(process.env.LIST_PER_PAGE)
 
   let start = (p-1) * perPage
 
 	let currentPage = sqlQuery(
-    "SELECT id,name,email,thumb,last_login_at,created_at FROM users ORDER BY id DESC LIMIT ? OFFSET ?", 
+    "SELECT * FROM users ORDER BY id DESC LIMIT ? OFFSET ?", 
     [perPage, start]
   )
 
@@ -80,6 +81,8 @@ exports.user_list = function(req, res, next) {
 				name: it.name,
 				email: it.email,
 				loginAt: it.last_login_at===0 ? "" : format("yyyy-MM-dd hh:mm:ss", new Date(it.last_login_at*1000)),
+				loginIp: it.last_login_ip == 0 ? "" : int2ip(it.last_login_ip),
+				status : it.status == 1 ? '启用' : '停用',
 				createdAt: format("yyyy-MM-dd hh:mm:ss", it.created_at)
 			})
 		})
@@ -118,11 +121,11 @@ exports.add_user = function(req, res, next) {
 
 	// test duplicate id
 	sqlQuery(
-		"SELECT id FROM user WHERE email=? limit 1", [user.email]
+		"SELECT id FROM users WHERE email=? limit 1", [user.email]
 	).then(function (rows) { 
 
 		if (rows.length > 0 ) {
-			res.json(jsonFail("email duplicate: " + user.email))
+			res.json(jsonFail("邮箱已经存在"))
 			return 
 		}
 
@@ -204,7 +207,7 @@ exports.admin_login = function(req, res, next) {
         let token = jwt.sign(
           { id: user.id, email: user.email },
           process.env.JWT_SECRET,
-          { expiresIn: "1h" }
+          { expiresIn: "12h" }
         );
 				console.log('token', token)
         res.json(
@@ -228,6 +231,16 @@ exports.admin_login = function(req, res, next) {
 function getAdminUserById(id) {
 	return  new Promise(function (resolve, reject) {
 		sqlQuery("SELECT * FROM admin WHERE id=?", [id]).then((rows) => {
+			resolve(rows[0] || null)
+		}).catch((err) => {
+			reject(err)
+		})
+	});
+}
+
+function getUserById(id) {
+	return  new Promise(function (resolve, reject) {
+		sqlQuery("SELECT * FROM users WHERE id=?", [id]).then((rows) => {
 			resolve(rows[0] || null)
 		}).catch((err) => {
 			reject(err)
@@ -287,3 +300,72 @@ exports.password_change = function(req, res, next) {
 
 }
 
+exports.user_change_password = function(req, res, next) {
+  var id = req.body.id || 0
+  var password = req.body.password || ''
+
+
+	if (password == "") {
+		res.json(jsonFail("密码不能为空"))
+		return 
+	}
+
+	let userPromise = getUserById(id)
+
+
+	let err = new Error("")
+	err.status = 400
+	userPromise.then(function (user) {
+		if (!user) {
+			err.message = "没有此会员"
+			next(err)
+		}
+
+
+		sqlQuery("UPDATE users SET password=? WHERE id=?", [
+			password_hash(password),
+			user.id,
+		])
+		.then(function (results) {
+			res.json(jsonSuccess());
+			// console.log('update user', results)
+		})
+		.catch(function (err) {
+			next(err);
+		});
+		
+	}).catch(function (err) {
+		next(err)
+	})
+
+}
+exports.user_status_change = function(req, res, next) {
+  var id = req.body.id || 0
+
+  let userPromise = getUserById(id)
+
+
+	let err = new Error("")
+	err.status = 400
+	userPromise.then(function (user) {
+		if (!user) {
+			err.message = "没有此会员"
+			next(err)
+		}
+
+		sqlQuery("UPDATE users SET status=? WHERE id=?", [
+			user.status == 1 ? 0 : 1,
+			user.id,
+		])
+		.then(function (results) {
+			res.json(jsonSuccess());
+			// console.log('update user', results)
+		})
+		.catch(function (err) {
+			next(err);
+		});
+		
+	}).catch(function (err) {
+		next(err)
+	})
+}

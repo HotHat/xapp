@@ -6,6 +6,7 @@ CREATE TABLE `users` (
   `thumb` varchar(256) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '头像',
   `last_login_at` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '最后一次登录登录时间',
   `last_login_ip` bigint(11) unsigned NOT NULL DEFAULT '0' COMMENT '最后一次登录登录IP',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
