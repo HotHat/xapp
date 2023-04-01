@@ -171,6 +171,7 @@ exports.admin_login = function(req, res, next) {
       resolve(true)
     })
   }) 
+  // console.log('password:', password, password_hash(password))
 
   captchaCheck.then(function (val) {
     sqlQuery("select * from admin where email=?", [email])
