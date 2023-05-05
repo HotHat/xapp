@@ -15,6 +15,7 @@ let tools = require('./tools')
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/api/user');
 var adminRouter = require('./routes/api/admin');
+var frontendRouter = require('./routes/api/frontend');
 
 var app = express();
 
@@ -47,6 +48,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // order sensitive
 app.use('/api/user', usersRouter);
 app.use('/api/panel', adminRouter);
+app.use('/api/frontend', frontendRouter);
 app.use('/api', indexRouter);
 // app.use('/users', usersRouter);
 
