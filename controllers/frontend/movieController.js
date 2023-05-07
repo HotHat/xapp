@@ -50,7 +50,7 @@ exports.movie_list = function (req, res, next) {
 				}
 			}
 		})
-		console.log(values);
+		// console.log(values);
 	})
 	.catch(function (err) {
 		next(err)

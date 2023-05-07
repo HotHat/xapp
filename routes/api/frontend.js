@@ -7,7 +7,7 @@ const cors = require('cors')
 const movieController = require(global.S.BASE_DIR + '/controllers/frontend/movieController')
 
 var corsOptions = {
-    origin: 'http://127.0.0.1:5173',
+    origin: process.env.CORS_URL,
     optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
 }
 

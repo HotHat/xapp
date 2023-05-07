@@ -86,7 +86,7 @@ app.use(function (err, req, res, next) {
     // res.render('error');
     res.json(
       tools.jsonFail(
-        req.app.get("env") === "development" ? err.message : "system error",
+        process.env.NODE_ENV === "development" ? err.message : "system error",
         err.status || 500
       )
     );
